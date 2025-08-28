@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,6 +41,7 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.core.HttpHeaders;
 import java.net.URI;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -153,7 +155,8 @@ public class ServiceClientImpl implements ServiceClient
             return;
           }
 
-          final Request request = requestBuilder.build(serviceLocation);
+          final Request request = requestBuilder.build(serviceLocation)
+                                                .addHeader(HttpHeaders.USER_AGENT, getUserAgent());
           ListenableFuture<Either<StringFullResponseHolder, FinalType>> responseFuture;
 
           log.debug("Service [%s] request [%s %s] starting.", serviceName, request.getMethod(), request.getUrl());
@@ -484,6 +487,15 @@ public class ServiceClientImpl implements ServiceClient
     }
 
     return errorMessage.toString();
+  }
+
+  private String getUserAgent()
+  {
+    final String version = GuavaUtils.firstNonNull(
+        ServiceClientImpl.class.getPackage().getImplementationVersion(),
+        "unknown"
+    );
+    return String.format("druid/%s/%s", serviceName, version);
   }
 
   @VisibleForTesting
